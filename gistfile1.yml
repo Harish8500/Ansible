@@ -1,0 +1,30 @@
+# Problem:
+#
+# If you use git submodules linking two private github repos, you'll need to create a separate deploy key for each.
+# Multiple keys are not supported by Ansible, nor does ansible (when running git module) resort to your `.ssh/config` file.
+# This means your ansible playbook will hang in this case.
+#
+# You can however use the ansible git module to checkout your repo in multiple steps, like this:
+#
+- hosts: webserver
+  vars:
+    - destination: /your/dest/path
+  tasks:
+    - name: App | Cloning repos + submodules
+      git: repo=git@github.com:Organisation/{{ item.repo }}.git
+           dest={{ item.dest }}
+           accept_hostkey=yes
+           force=yes
+           recursive=no
+           key_file=/home/user/.ssh/id_rsa.github-{{ item.repo }}
+      with_items:
+        -
+          dest: "{{ destination }}"
+          repo: PrimaryRepo
+        -
+          dest: "{{ destination }}/app/core"
+          repo: SubmoduleRepo
+
+#
+# The key part is that `recursive` is set to `no`.
+#
